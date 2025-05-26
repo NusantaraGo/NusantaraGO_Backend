@@ -31,11 +31,11 @@ const init = async (MONGODB_URI, PORT, JWT_SECRET_KEY) => {
 
   // mendapatkan connect atau tidak
   const result = await mongoose.connect(MONGODB_URI, {
-    dbName: "NusantaraGO",
+    dbName: "NusantaraGo",
   });
 
   if (!result) {
-    return boom.badRequest("MongoDB is Disconnected");
+    return boom.badRequest("MongoDB Gagal Terkoneksi");
   }
 
   console.log("Connected to MongoDB");
@@ -63,7 +63,7 @@ const init = async (MONGODB_URI, PORT, JWT_SECRET_KEY) => {
   server.route(authRoutes);
 
   await server.start();
-  console.log("Server running on %s", server.info.uri);
+  console.log("Server berjalan di %s", server.info.uri);
 };
 
 try {

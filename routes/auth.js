@@ -43,6 +43,20 @@ const loginValidateSchema = () => {
   });
 };
 
+function verifyOtpValidateSchema() {
+  Joi.object({
+    email: Joi.string()
+      .trim()
+      .email({ minDomainSegments: 2, tlds: { allow: ["com"] } })
+      .required()
+      .messages({ "any.only": "Email harus diisi dengan akhiran @gmail.com" }),
+    otp: Joi.string()
+      .trim()
+      .pattern(/^\d+$/) // hanya digit (0-9)
+      .required(),
+  });
+}
+
 module.exports = [
   {
     method: "POST",
@@ -61,7 +75,15 @@ module.exports = [
   {
     method: "POST",
     path: "/verify-otp",
-    options: { auth: false },
+    options: {
+      auth: false,
+      validate: {
+        payload: verifyOtpValidateSchema(),
+        failAction: (request, h, err) => {
+          throw Boom.badRequest(err.message);
+        },
+      },
+    },
     handler: authController.verifyOtp,
   },
   {
