@@ -261,4 +261,19 @@ exports.login = async (request, h) => {
     )
     .state("session", uuidJwt); // <--- pastikan pakai .state()
 };
-// benerin cookie
+
+exports.getUser = async (request, h) => {
+  console.log("jalan");
+  const sessionToken = request.state.session;
+  // decode token uuid
+  let uuidJwt;
+  try {
+    response = uuidToString(sessionToken);
+    uuidJwt = response;
+    console.log(uuid);
+  } catch (error) {
+    return Boom.badRequest(error);
+  }
+  // const user = await User.findOne({ username }).select({ _id: 0 });
+  // return user;
+};

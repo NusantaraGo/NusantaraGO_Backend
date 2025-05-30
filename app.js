@@ -71,7 +71,7 @@ const init = async (MONGODB_URI, PORT, JWT_SECRET_KEY) => {
   server.state("session", {
     ttl: 24 * 60 * 60 * 1000, // 1 hari
     isSecure: NODE_ENV === "production", // HTTPS di production
-    isHttpOnly: true, // Anti-XSS
+    isHttpOnly: false, // Anti-XSS
     isSameSite: "Lax", // atau "None" jika butuh cross-site (dengan HTTPS)
     path: "/",
   });

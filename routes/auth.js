@@ -2,6 +2,10 @@ const authController = require("../controllers/authController");
 const Boom = require("@hapi/boom");
 const Joi = require("joi");
 
+/**
+ * Class untuk mengatur route authentikasi.
+ * @class AuthUrl
+ */
 class AuthUrl {
   /**
    * Registers a new user and returns the user's data.
@@ -33,7 +37,7 @@ class AuthUrl {
    */
   verifyOtpPost() {
     return {
-      method: "POST",
+      method: "PATCH",
       path: "/auth/verify-otp",
       options: {
         auth: false,
@@ -48,6 +52,11 @@ class AuthUrl {
     };
   }
 
+  /**
+   * Handles the login endpoint.
+   * @typedef {import("hapi").RouteOptions} RouteOptions
+   * @returns {RouteOptions} Hapi route options
+   */
   loginPost() {
     return {
       method: "POST",
@@ -62,6 +71,20 @@ class AuthUrl {
         },
       },
       handler: authController.login,
+    };
+  }
+
+  /**
+   * Retrieves user data based on the provided bearer token.
+   * @typedef {import("hapi").RouteOptions} RouteOptions
+   * @returns {RouteOptions} Hapi route options
+   */
+
+  getUserPost() {
+    return {
+      method: "GET",
+      path: "/auth/get-user",
+      handler: authController.getUser,
     };
   }
 }
@@ -154,6 +177,7 @@ const verifyOtpValidateSchema = () => {
 const registerPost = new AuthUrl().registerPost(); //url post register
 const verifyOtpPost = new AuthUrl().verifyOtpPost(); //url post verify
 const loginPost = new AuthUrl().loginPost(); //url post login
+const getUserPost = new AuthUrl().getUserPost();
 // end
 
-module.exports = [registerPost, verifyOtpPost, loginPost];
+module.exports = [registerPost, verifyOtpPost, loginPost, getUserPost];
