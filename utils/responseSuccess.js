@@ -1,8 +1,9 @@
-function successResponse(message, data = null) {
+function successResponse(message_title, detail_message, data = null) {
   return {
     statusCode: 200,
     error: null,
-    message,
+    message_title,
+    detail_message,
     data,
   };
 }
