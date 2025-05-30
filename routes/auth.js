@@ -93,8 +93,8 @@ const registerValidateSchema = () =>
       )
       .required()
       .messages({
-        "any.only":
-          "Password harus diawali dengan kapital, minimal 6 karakter, ada angka, ada simbol('#!-_.')",
+        "string.pattern.base":
+          "Password harus diawali huruf kapital, minimal 6 karakter, mengandung angka dan simbol (#!-_.)",
       }),
     password2: Joi.string()
       .trim()
@@ -119,8 +119,8 @@ const loginValidateSchema = () => {
       )
       .required()
       .messages({
-        "any.only":
-          "Password harus diawali dengan kapital, minimal 6 karakter, ada angka, ada simbol('#!-_.')",
+        "string.pattern.base":
+          "Password harus diawali huruf kapital, minimal 6 karakter, mengandung angka dan simbol (#!-_.)",
       }),
   });
 };
@@ -137,19 +137,16 @@ const loginValidateSchema = () => {
  */
 const verifyOtpValidateSchema = () => {
   return Joi.object({
-    email: Joi.string()
-      .trim()
-      .pattern(/^[a-zA-Z0-9._%+-]+@gmail\.com$/)
-      .email({ minDomainSegments: 2, tlds: { allow: ["com"] } })
-      .required()
-      .messages({
-        "any.only": "Email harus diisi dengan akhiran @gmail.com",
-        "string.pattern.base": "Email harus menggunakan domain @gmail.com",
-      }),
+    searchParams: Joi.string().trim().required().messages({
+      "any.only": "Parameter wajib diisi",
+    }),
     otp: Joi.string()
-      .trim()
-      .pattern(/^\d+$/) // hanya digit (0-9)
-      .required(),
+      .allow("")
+      .optional()
+      .pattern(/^\d{6}$|^$/)
+      .messages({
+        "string.pattern.base": "OTP harus berupa 6 angka atau kosong",
+      }), // hanya digit (0-9)
   });
 };
 

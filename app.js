@@ -8,6 +8,7 @@ const boom = require("@hapi/boom");
 const MONGODB_URI = process.env.MONGODB_URI;
 const PORT = process.env.PORT || 3000;
 const JWT_SECRET_KEY = process.env.JWT_SECRET_KEY;
+const NODE_ENV = process.env.NODE_ENV;
 
 /**
  * Inits the server, connects to MongoDB, and registers the auth route.
@@ -43,6 +44,12 @@ const init = async (MONGODB_URI, PORT, JWT_SECRET_KEY) => {
   const server = Hapi.server({
     port: PORT || 3000,
     host: "localhost",
+    routes: {
+      cors: {
+        origin: ["*"], // atau spesifik ['http://localhost:5173']
+        credentials: true, // agar cookie bisa dikirim
+      },
+    },
   });
 
   await server.register(require("hapi-auth-jwt2"));
@@ -59,6 +66,15 @@ const init = async (MONGODB_URI, PORT, JWT_SECRET_KEY) => {
   });
 
   server.auth.default("jwt");
+
+  // Set konfigurasi cookie
+  server.state("session", {
+    ttl: 24 * 60 * 60 * 1000, // 1 hari
+    isSecure: NODE_ENV === "production", // HTTPS di production
+    isHttpOnly: true, // Anti-XSS
+    isSameSite: "Lax", // atau "None" jika butuh cross-site (dengan HTTPS)
+    path: "/",
+  });
 
   server.route(authRoutes);
 
