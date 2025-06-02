@@ -16,14 +16,7 @@ const { stringToUUID, uuidToString } = require("../utils/uuidGenerator");
  * @param {Object} h - The response toolkit.
  * @returns {Promise} - A promise that resolves to a response object.
  */
-/**
- * Handles the register endpoint.
- * @param {Object} request  - The request object.
- * @param {Object} h - The response toolkit.
- * @returns {Promise} - A promise that resolves to a response object.
- */
 exports.register = async (request, h, err) => {
-  /** @type {{username: string, email: string, password: string, password2: string}} */
   /** @type {{username: string, email: string, password: string, password2: string}} */
   const { username, email, password, password2 } = request.payload;
   const confirmPassword = password2;
@@ -40,16 +33,6 @@ exports.register = async (request, h, err) => {
     return Boom.badRequest(
       "Terjadi kesalahan tipe data username/email/password/confirmPassword"
     );
-  }
-
-  // cek email sama sudah ada atau belum
-  const existingUser = await User.findOne({ email });
-
-  if (existingUser) {
-    if (existingUser.verified === true) {
-      return Boom.badRequest("Email sudah terdaftar");
-    }
-    await User.deleteOne(existingUser);
   }
 
   // cek username sama sudah ada atau belum
@@ -109,7 +92,7 @@ exports.register = async (request, h, err) => {
   }
 
   // buat uuid email
-  uuidEmail = await stringToUUID(email);
+  uuidEmail = stringToUUID(email);
 
   // kirim reponse
   return h.response(
