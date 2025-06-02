@@ -35,16 +35,6 @@ exports.register = async (request, h, err) => {
     );
   }
 
-  // cek email sama sudah ada atau belum
-  const existingUser = await User.findOne({ email });
-
-  if (existingUser) {
-    if (existingUser.verified === true) {
-      return Boom.badRequest("Email sudah terdaftar");
-    }
-    await User.deleteOne(existingUser);
-  }
-
   // cek username sama sudah ada atau belum
   const existingUsername = await User.findOne({ username });
   if (existingUsername) {
@@ -73,6 +63,7 @@ exports.register = async (request, h, err) => {
   console.log("✅ Otp Berhasil di generate");
 
   const otpExpiredAt = new Date(Date.now() + 3 * 60 * 1000);
+  console.log("✅ Otp Berhasil di generate");
 
   // buat user sementara dulu
   const user = new User({
@@ -81,6 +72,7 @@ exports.register = async (request, h, err) => {
     password: hashedPassword,
     otp,
     otpCreatedAt: new Date(),
+    otpExpiredAt, //10 menit
     otpExpiredAt, //10 menit
   });
 
@@ -100,7 +92,7 @@ exports.register = async (request, h, err) => {
   }
 
   // buat uuid email
-  uuidEmail = await stringToUUID(email);
+  uuidEmail = stringToUUID(email);
 
   // kirim reponse
   return h.response(
@@ -114,6 +106,7 @@ exports.register = async (request, h, err) => {
     )
   );
 };
+
 /**
  * Verifies the OTP sent to the user's email.
  *
@@ -157,8 +150,8 @@ exports.verifyOtp = async (request, h) => {
       username: user.username,
       email: user.email,
     });
-    if (response.deletedCount > 0) {
-      pass;
+    if (response.deletedCount <= 0) {
+      return Boom.badRequest("Gagal Hapus");
     }
     return Boom.badRequest("OTP sudah kadaluarsa");
   }
@@ -176,7 +169,7 @@ exports.verifyOtp = async (request, h) => {
   user.otp = null;
   // ubah otpCreatedAt dan otpExpiredAt menjadi null
   user.otpCreatedAt = null;
-  user.otpExpiredAt = null;
+
   // save
   try {
     await user.save();

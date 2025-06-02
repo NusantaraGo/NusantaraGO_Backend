@@ -52,6 +52,12 @@ const init = async (MONGODB_URI, PORT, JWT_SECRET_KEY) => {
         credentials: true, // agar cookie bisa dikirim
       },
     },
+    routes: {
+      cors: {
+        origin: ["*"], // atau spesifik ['http://localhost:5173']
+        credentials: true, // agar cookie bisa dikirim
+      },
+    },
   });
 
   await server.register([require("hapi-auth-jwt2"), require("@hapi/cookie")]);
