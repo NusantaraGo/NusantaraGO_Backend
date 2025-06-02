@@ -35,16 +35,6 @@ exports.register = async (request, h, err) => {
     );
   }
 
-  // cek email sama sudah ada atau belum
-  const existingUser = await User.findOne({ email });
-
-  if (existingUser) {
-    if (existingUser.verified === true) {
-      return Boom.badRequest("Email sudah terdaftar");
-    }
-    await User.deleteOne(existingUser);
-  }
-
   // cek username sama sudah ada atau belum
   const existingUsername = await User.findOne({ username });
   if (existingUsername) {
@@ -73,6 +63,7 @@ exports.register = async (request, h, err) => {
   console.log("✅ Otp Berhasil di generate");
 
   const otpExpiredAt = new Date(Date.now() + 3 * 60 * 1000);
+  console.log("✅ Otp Berhasil di generate");
 
   // buat user sementara dulu
   const user = new User({
@@ -81,6 +72,7 @@ exports.register = async (request, h, err) => {
     password: hashedPassword,
     otp,
     otpCreatedAt: new Date(),
+    otpExpiredAt, //10 menit
     otpExpiredAt, //10 menit
   });
 
@@ -100,7 +92,7 @@ exports.register = async (request, h, err) => {
   }
 
   // buat uuid email
-  uuidEmail = await stringToUUID(email);
+  uuidEmail = stringToUUID(email);
 
   // kirim reponse
   return h.response(
@@ -114,6 +106,7 @@ exports.register = async (request, h, err) => {
     )
   );
 };
+
 /**
  * Verifies the OTP sent to the user's email.
  *
@@ -157,8 +150,8 @@ exports.verifyOtp = async (request, h) => {
       username: user.username,
       email: user.email,
     });
-    if (response.deletedCount > 0) {
-      pass;
+    if (response.deletedCount <= 0) {
+      return Boom.badRequest("Gagal Hapus");
     }
     return Boom.badRequest("OTP sudah kadaluarsa");
   }
@@ -176,7 +169,7 @@ exports.verifyOtp = async (request, h) => {
   user.otp = null;
   // ubah otpCreatedAt dan otpExpiredAt menjadi null
   user.otpCreatedAt = null;
-  user.otpExpiredAt = null;
+
   // save
   try {
     await user.save();
@@ -243,15 +236,6 @@ exports.login = async (request, h) => {
     return Boom.badRequest("Gagal membuat token jwt");
   }
 
-  // buat jwt to uuid
-  let uuidJwt;
-  try {
-    response = stringToUUID(token);
-    uuidJwt = response;
-  } catch (error) {
-    return Boom.badRequest(error);
-  }
-
   return h
     .response(
       successResponse(
@@ -259,6 +243,106 @@ exports.login = async (request, h) => {
         `User <b>${username}</b> berhasil melakukan login`
       )
     )
-    .state("session", uuidJwt); // <--- pastikan pakai .state()
+    .state("session", token); // <--- pastikan pakai .state()
 };
-// benerin cookie
+
+/**
+ * Handles the get user endpoint.
+ * @param {Object} request - The request object.
+ * @param {Object} h - The response toolkit.
+ * @returns {Promise} - A promise that resolves to a response object.
+ *
+ * This function will return the user's data if the user is verified.
+ * If the user is not verified, it will return a Boom error.
+ */
+exports.getUser = async (request, h) => {
+  // cek data autentikas sekarang(username, email)
+  const authNow = request.auth.credentials;
+
+  // dapatkan data user
+  const user = await User.findOne({ ...authNow, verified: true }).select({
+    _id: 0,
+    password: 0,
+    otp: 0,
+    otpCreatedAt: 0,
+    otpExpiredAt: 0,
+  });
+
+  // mendapatkan user?
+  if (!user) {
+    return Boom.forbidden("User belum terverifikasi. Coba lagi!");
+  }
+
+  // kembalikan responsenya dalam bentuk json
+  return h.response(
+    successResponse(
+      "User Terverifikasi!",
+      `User <b>${user.username}</b> berhasil terverifikasi`,
+      user
+    )
+  );
+};
+
+exports.updateUser = async (request, h) => {
+  try {
+    // ambil credential yang diterima dari validate
+    const { username, email, password } = await request.payload;
+
+    // temukan username dari database
+    const user = await User.findOne({ email, verified: true }).select({
+      _id: 0,
+      password: 0,
+      otp: 0,
+      otpCreatedAt: 0,
+      otpExpiredAt: 0,
+    });
+
+    // cek user ada dan terverikasi
+    if (!user) {
+      throw new Error("email tidak ditemukan/belum terverifikasi");
+    }
+
+    // cek username dan password wajib berbeda
+    const existingUser = await User.findOne({ username });
+    if (existingUser) {
+      throw new Error("Username tidak boleh sama");
+    }
+    if (!(await verifyPassword(password, user.password))) {
+      throw new Error("Password tidak boleh sama");
+    }
+
+    const existingUpdateUser = await User.updateOne(
+      {
+        email,
+        verified: true,
+      },
+      {
+        $set: {
+          username,
+          password,
+        },
+      }
+    );
+
+    // Check if the update was successful
+    if (existingUpdateUser.Modified === 1) {
+      return successResponse(
+        "Update Berhasil!",
+        "Profile saya berhasil di update"
+      );
+    } else {
+      throw new Error("Profile saya Gagal di update");
+    }
+
+    // lanjutkan buat username check sama atau berbeda, dan dicek sama user lain juga
+    //  lembalikan response dan data terbaru agar diupdate
+  } catch (err) {
+    if (err) {
+      return Boom.badRequest(err.message);
+    } else {
+      return Boom.internal("Ada kesalahan di server!");
+    }
+  }
+};
+
+// update user

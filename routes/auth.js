@@ -2,6 +2,10 @@ const authController = require("../controllers/authController");
 const Boom = require("@hapi/boom");
 const Joi = require("joi");
 
+/**
+ * Class untuk mengatur route authentikasi.
+ * @class AuthUrl
+ */
 class AuthUrl {
   /**
    * Registers a new user and returns the user's data.
@@ -33,7 +37,7 @@ class AuthUrl {
    */
   verifyOtpPost() {
     return {
-      method: "POST",
+      method: "PATCH",
       path: "/auth/verify-otp",
       options: {
         auth: false,
@@ -48,6 +52,11 @@ class AuthUrl {
     };
   }
 
+  /**
+   * Handles the login endpoint.
+   * @typedef {import("hapi").RouteOptions} RouteOptions
+   * @returns {RouteOptions} Hapi route options
+   */
   loginPost() {
     return {
       method: "POST",
@@ -64,6 +73,35 @@ class AuthUrl {
       handler: authController.login,
     };
   }
+
+  /**
+   * Retrieves user data based on the provided bearer token.
+   * @typedef {import("hapi").RouteOptions} RouteOptions
+   * @returns {RouteOptions} Hapi route options
+   */
+  getUser() {
+    return {
+      method: "GET",
+      path: "/auth/get-user",
+      handler: authController.getUser,
+    };
+  }
+
+  updateUser() {
+    return {
+      method: "PUT",
+      path: "/auth/update-user",
+      options: {
+        validate: {
+          payload: updateUserValidateSchema(),
+          failAction: (request, h, err) => {
+            throw Boom.badRequest(err.message);
+          },
+        },
+      },
+      handler: authController.updateUser,
+    };
+  }
 }
 
 /**
@@ -76,31 +114,53 @@ class AuthUrl {
  */
 const registerValidateSchema = () =>
   Joi.object({
-    username: Joi.string().trim().alphanum().min(3).max(30).required(),
+    username: Joi.string()
+      .trim()
+      .alphanum()
+      .min(3)
+      .max(30)
+      .required()
+      .messages({
+        "string.base": "Username harus berupa teks",
+        "string.empty": "Username tidak boleh kosong",
+        "string.alphanum": "Username hanya boleh berisi huruf dan angka",
+        "string.min": "Username minimal harus terdiri dari 3 karakter",
+        "string.max": "Username maksimal terdiri dari 30 karakter",
+        "any.required": "Username wajib diisi",
+      }),
     email: Joi.string()
       .trim()
       .pattern(/^[a-zA-Z0-9._%+-]+@gmail\.com$/)
       .email({ minDomainSegments: 2, tlds: { allow: ["com"] } })
       .required()
       .messages({
-        "any.only": "Email harus diisi dengan akhiran @gmail.com",
+        "string.base": "Email harus berupa teks",
+        "string.empty": "Email tidak boleh kosong",
         "string.pattern.base": "Email harus menggunakan domain @gmail.com",
+        "string.email": "Format email tidak valid",
+        "any.required": "Email wajib diisi",
       }),
     password: Joi.string()
       .trim()
-      .pattern(
-        new RegExp(/^(?=[A-Z])(?=.*[a-zA-Z])(?=.*\d)(?=.*[#!-_.]).{6,}$/)
-      )
+      .pattern(/^(?=[A-Z])(?=.*[a-zA-Z])(?=.*\d)(?=.*[#!\-_.]).{6,}$/)
       .required()
       .messages({
+        "string.base": "Password harus berupa teks",
+        "string.empty": "Password tidak boleh kosong",
         "string.pattern.base":
           "Password harus diawali huruf kapital, minimal 6 karakter, mengandung angka dan simbol (#!-_.)",
+        "any.required": "Password wajib diisi",
       }),
+
     password2: Joi.string()
       .trim()
       .valid(Joi.ref("password"))
       .required()
-      .messages({ "any.only": "Konfirmasi password tidak cocok" }),
+      .messages({
+        "any.only": "Konfirmasi password tidak cocok",
+        "string.empty": "Konfirmasi password tidak boleh kosong",
+        "any.required": "Konfirmasi password wajib diisi",
+      }),
   });
 
 /**
@@ -111,16 +171,30 @@ const registerValidateSchema = () =>
  */
 const loginValidateSchema = () => {
   return Joi.object({
-    username: Joi.string().trim().alphanum().min(3).max(30).required(),
-    password: Joi.string()
+    username: Joi.string()
       .trim()
-      .pattern(
-        new RegExp(/^(?=[A-Z])(?=.*[a-zA-Z])(?=.*\d)(?=.*[#!-_.]).{6,}$/)
-      )
+      .alphanum()
+      .min(3)
+      .max(30)
       .required()
       .messages({
+        "string.base": "Username harus berupa teks",
+        "string.empty": "Username tidak boleh kosong",
+        "string.alphanum": "Username hanya boleh berisi huruf dan angka",
+        "string.min": "Username minimal harus terdiri dari 3 karakter",
+        "string.max": "Username maksimal terdiri dari 30 karakter",
+        "any.required": "Username wajib diisi",
+      }),
+    password: Joi.string()
+      .trim()
+      .pattern(/^(?=[A-Z])(?=.*[a-zA-Z])(?=.*\d)(?=.*[#!\-_.]).{6,}$/)
+      .required()
+      .messages({
+        "string.base": "Password harus berupa teks",
+        "string.empty": "Password tidak boleh kosong",
         "string.pattern.base":
           "Password harus diawali huruf kapital, minimal 6 karakter, mengandung angka dan simbol (#!-_.)",
+        "any.required": "Password wajib diisi",
       }),
   });
 };
@@ -137,9 +211,32 @@ const loginValidateSchema = () => {
  */
 const verifyOtpValidateSchema = () => {
   return Joi.object({
-    searchParams: Joi.string().trim().required().messages({
-      "any.only": "Parameter wajib diisi",
-    }),
+    username: Joi.string()
+      .trim()
+      .alphanum()
+      .min(3)
+      .max(30)
+      .required()
+      .messages({
+        "string.base": "Username harus berupa teks",
+        "string.empty": "Username tidak boleh kosong",
+        "string.alphanum": "Username hanya boleh berisi huruf dan angka",
+        "string.min": "Username minimal harus terdiri dari 3 karakter",
+        "string.max": "Username maksimal terdiri dari 30 karakter",
+        "any.required": "Username wajib diisi",
+      }),
+    email: Joi.string()
+      .trim()
+      .pattern(/^[a-zA-Z0-9._%+-]+@gmail\.com$/)
+      .email({ minDomainSegments: 2, tlds: { allow: ["com"] } })
+      .required()
+      .messages({
+        "string.base": "Email harus berupa teks",
+        "string.empty": "Email tidak boleh kosong",
+        "string.pattern.base": "Email harus menggunakan domain @gmail.com",
+        "string.email": "Format email tidak valid",
+        "any.required": "Email wajib diisi",
+      }),
     otp: Joi.string()
       .allow("")
       .optional()
@@ -150,10 +247,58 @@ const verifyOtpValidateSchema = () => {
   });
 };
 
+const updateUserValidateSchema = () => {
+  return Joi.object({
+    username: Joi.string().trim().required().messages({
+      "string.base": "Username harus berupa teks",
+      "string.empty": "Username tidak boleh kosong",
+      "string.alphanum": "Username hanya boleh berisi huruf dan angka",
+      "string.min": "Username minimal harus terdiri dari 3 karakter",
+      "string.max": "Username maksimal terdiri dari 30 karakter",
+      "any.required": "Username wajib diisi",
+    }),
+    email: Joi.string()
+      .trim()
+      .pattern(/^[a-zA-Z0-9._%+-]+@gmail\.com$/)
+      .email({ minDomainSegments: 2, tlds: { allow: ["com"] } })
+      .required()
+      .messages({
+        "string.base": "Email harus berupa teks",
+        "string.empty": "Email tidak boleh kosong",
+        "string.pattern.base": "Email harus menggunakan domain @gmail.com",
+        "string.email": "Format email tidak valid",
+        "any.required": "Email wajib diisi",
+      }),
+    password: Joi.string()
+      .trim()
+      .pattern(/^(?=[A-Z])(?=.*[a-zA-Z])(?=.*\d)(?=.*[#!\-_.]).{6,}$/)
+      .required()
+      .messages({
+        "string.base": "Password harus berupa teks",
+        "string.empty": "Password tidak boleh kosong",
+        "string.pattern.base":
+          "Password harus diawali huruf kapital, minimal 6 karakter, mengandung angka dan simbol (#!-_.)",
+        "any.required": "Password wajib diisi",
+      }),
+
+    password2: Joi.string()
+      .trim()
+      .valid(Joi.ref("password"))
+      .required()
+      .messages({
+        "any.only": "Konfirmasi password tidak cocok",
+        "string.empty": "Konfirmasi password tidak boleh kosong",
+        "any.required": "Konfirmasi password wajib diisi",
+      }),
+  });
+};
+
 // inisiasi url autentikasi
 const registerPost = new AuthUrl().registerPost(); //url post register
 const verifyOtpPost = new AuthUrl().verifyOtpPost(); //url post verify
 const loginPost = new AuthUrl().loginPost(); //url post login
+const getUser = new AuthUrl().getUser();
+const updateUser = new AuthUrl().updateUser();
 // end
 
-module.exports = [registerPost, verifyOtpPost, loginPost];
+module.exports = [registerPost, verifyOtpPost, loginPost, getUser, updateUser];
