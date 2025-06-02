@@ -4,11 +4,13 @@ const Hapi = require("@hapi/hapi");
 const mongoose = require("mongoose");
 const authRoutes = require("./routes/auth");
 const boom = require("@hapi/boom");
+const jwt = require("jsonwebtoken");
 
 const MONGODB_URI = process.env.MONGODB_URI;
 const PORT = process.env.PORT || 3000;
 const JWT_SECRET_KEY = process.env.JWT_SECRET_KEY;
 const NODE_ENV = process.env.NODE_ENV;
+const PASSWORD_COOKIE = process.env.PASSWORD_COOKIE;
 
 /**
  * Inits the server, connects to MongoDB, and registers the auth route.
@@ -52,29 +54,53 @@ const init = async (MONGODB_URI, PORT, JWT_SECRET_KEY) => {
     },
   });
 
-  await server.register(require("hapi-auth-jwt2"));
+  await server.register([require("hapi-auth-jwt2"), require("@hapi/cookie")]);
 
   const validate = async (decoded, request, h) => {
     console.log(decoded, request, h);
     return { isValid: true }; // Bisa tambahkan pengecekan ke DB jika perlu
   };
 
+  // buat untuk jwt konfigurasi
   server.auth.strategy("jwt", "jwt", {
     key: JWT_SECRET_KEY,
     validate,
     verifyOptions: { algorithms: ["HS256"] },
   });
 
-  server.auth.default("jwt");
-
   // Set konfigurasi cookie
-  server.state("session", {
-    ttl: 24 * 60 * 60 * 1000, // 1 hari
-    isSecure: NODE_ENV === "production", // HTTPS di production
-    isHttpOnly: false, // Anti-XSS
-    isSameSite: "Lax", // atau "None" jika butuh cross-site (dengan HTTPS)
-    path: "/",
+  server.auth.strategy("session", "cookie", {
+    cookie: {
+      name: "session",
+      password: PASSWORD_COOKIE,
+      path: "/",
+      ttl: 24 * 60 * 60 * 1000, // 1 hari
+      isSecure: NODE_ENV === "production", // HTTPS di production
+      isHttpOnly: NODE_ENV === "production", // Anti-XSS
+      isSameSite: "Lax", // atau "None" jika butuh cross-site (dengan HTTPS)
+      // encoding: "none", // ⬅️ penting untuk JWT! Jangan biarkan Hapi auto-encode
+    },
+    validate: async (request, session) => {
+      try {
+        const decoded = jwt.verify(session, JWT_SECRET_KEY);
+        if (!decoded) {
+          throw new Error("JWT Expired");
+        }
+        return {
+          isValid: true,
+          credentials: decoded.data_user, // simpan info user ke credentials
+        };
+      } catch (err) {
+        if (err) {
+          return boom.badRequest(err.message);
+        } else {
+          return boom.badRequest("Session expired/tidak ditemukan");
+        }
+      }
+    },
   });
+
+  server.auth.default("session");
 
   server.route(authRoutes);
 
