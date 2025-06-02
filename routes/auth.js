@@ -212,7 +212,8 @@ const loginValidateSchema = () => {
 const verifyOtpValidateSchema = () => {
   return Joi.object({
     searchParams: Joi.string().trim().required().messages({
-      "any.required": "Parameter wajib diisi",
+      "string.empty": "Parameter kosong",
+      "any.required": 'Parameter "searchParams" wajib diisi',
     }),
     otp: Joi.string()
       .allow("")
