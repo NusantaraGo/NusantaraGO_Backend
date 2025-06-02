@@ -9,6 +9,7 @@ const {
   verifyPassword,
 } = require("../utils/encryptPassword");
 const { stringToUUID, uuidToString } = require("../utils/uuidGenerator");
+const { stringToUUID, uuidToString } = require("../utils/uuidGenerator");
 
 /**
  * Handles the register endpoint.
@@ -16,7 +17,14 @@ const { stringToUUID, uuidToString } = require("../utils/uuidGenerator");
  * @param {Object} h - The response toolkit.
  * @returns {Promise} - A promise that resolves to a response object.
  */
+/**
+ * Handles the register endpoint.
+ * @param {Object} request  - The request object.
+ * @param {Object} h - The response toolkit.
+ * @returns {Promise} - A promise that resolves to a response object.
+ */
 exports.register = async (request, h, err) => {
+  /** @type {{username: string, email: string, password: string, password2: string}} */
   /** @type {{username: string, email: string, password: string, password2: string}} */
   const { username, email, password, password2 } = request.payload;
   const confirmPassword = password2;
@@ -38,7 +46,12 @@ exports.register = async (request, h, err) => {
   // cek email sama sudah ada atau belum
   const existingUser = await User.findOne({ email });
 
+
   if (existingUser) {
+    if (existingUser.verified === true) {
+      return Boom.badRequest("Email sudah terdaftar");
+    }
+    await User.deleteOne(existingUser);
     if (existingUser.verified === true) {
       return Boom.badRequest("Email sudah terdaftar");
     }
@@ -48,6 +61,10 @@ exports.register = async (request, h, err) => {
   // cek username sama sudah ada atau belum
   const existingUsername = await User.findOne({ username });
   if (existingUsername) {
+    if (existingUser.verified === true) {
+      return Boom.badRequest("Username sudah terdaftar");
+    }
+    await User.deleteOne(existingUsername);
     if (existingUser.verified === true) {
       return Boom.badRequest("Username sudah terdaftar");
     }
@@ -73,6 +90,9 @@ exports.register = async (request, h, err) => {
   console.log("✅ Otp Berhasil di generate");
 
   const otpExpiredAt = new Date(Date.now() + 3 * 60 * 1000);
+  console.log("✅ Otp Berhasil di generate");
+
+  const otpExpiredAt = new Date(Date.now() + 3 * 60 * 1000);
 
   // buat user sementara dulu
   const user = new User({
@@ -82,11 +102,13 @@ exports.register = async (request, h, err) => {
     otp,
     otpCreatedAt: new Date(),
     otpExpiredAt, //10 menit
+    otpExpiredAt, //10 menit
   });
 
   // simpan user
   try {
     await user.save();
+    console.log("✅ User berhasil disimpan:");
     console.log("✅ User berhasil disimpan:");
   } catch (err) {
     return Boom.badRequest("❌ Error saat menyimpan user:" + err.message);
@@ -125,8 +147,41 @@ exports.register = async (request, h, err) => {
  * @param {Object} request - The request object containing the payload with searchParams and otp.
  * @returns {Promise} - A promise that resolves to a success response or a Boom error.
  */
+  // buat uuid email
+  uuidEmail = await stringToUUID(email);
+
+  // kirim reponse
+  return h.response(
+    successResponse(
+      "Verifikasi otp",
+      "OTP berhasil dikirimkan ke " + email + ". Silahkan cek email anda.",
+      {
+        email: uuidEmail,
+        otpExpiredAt: otpExpiredAt,
+      }
+    )
+  );
+};
+/**
+ * Verifies the OTP sent to the user's email.
+ *
+ * This function takes a request object containing a UUID search parameter and an OTP.
+ * It converts the UUID back to an email address, validates the email and OTP, and
+ * checks if the OTP has expired. If the OTP is valid and not expired, it updates
+ * the user record to mark the email as verified and clears the OTP fields.
+ *
+ * @param {Object} request - The request object containing the payload with searchParams and otp.
+ * @returns {Promise} - A promise that resolves to a success response or a Boom error.
+ */
 exports.verifyOtp = async (request, h) => {
   // ambil input email dan otpdari request
+  const { searchParams, otp } = request.payload;
+
+  // ubah uuid searchparams jadi string email
+  const responseString = await uuidToString(searchParams);
+  const email = responseString + "@gmail.com";
+
+  console.log(email);
   const { searchParams, otp } = request.payload;
 
   // ubah uuid searchparams jadi string email
@@ -149,7 +204,11 @@ exports.verifyOtp = async (request, h) => {
   if (!user.otpExpiredAt)
     return Boom.badRequest("Verifikasi hanya bisa dilakukan sekali");
 
+  if (!user.otpExpiredAt)
+    return Boom.badRequest("Verifikasi hanya bisa dilakukan sekali");
+
   const isExpired = new Date() > user.otpExpiredAt;
+
 
   if (isExpired) {
     // hapus user terdaftar
@@ -160,7 +219,18 @@ exports.verifyOtp = async (request, h) => {
     if (response.deletedCount > 0) {
       pass;
     }
+    const response = await user.deleteOne({
+      username: user.username,
+      email: user.email,
+    });
+    if (response.deletedCount > 0) {
+      pass;
+    }
     return Boom.badRequest("OTP sudah kadaluarsa");
+  }
+
+  if (!otp || otp === "") {
+    return Boom.badRequest("OTP wajib diisi");
   }
 
   if (!otp || otp === "") {
@@ -190,8 +260,18 @@ exports.verifyOtp = async (request, h) => {
     "Terverifikasi!",
     `Email ${email} berhasil diverifikasi.`
   );
+  return successResponse(
+    "Terverifikasi!",
+    `Email ${email} berhasil diverifikasi.`
+  );
 };
 
+/**
+ * Handles the login endpoint.
+ * @param {Object} request - The request object.
+ * @param {Object} h - The response toolkit.
+ * @returns {Promise} - A promise that resolves to a response object.
+ */
 /**
  * Handles the login endpoint.
  * @param {Object} request - The request object.
