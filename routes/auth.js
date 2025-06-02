@@ -211,32 +211,9 @@ const loginValidateSchema = () => {
  */
 const verifyOtpValidateSchema = () => {
   return Joi.object({
-    username: Joi.string()
-      .trim()
-      .alphanum()
-      .min(3)
-      .max(30)
-      .required()
-      .messages({
-        "string.base": "Username harus berupa teks",
-        "string.empty": "Username tidak boleh kosong",
-        "string.alphanum": "Username hanya boleh berisi huruf dan angka",
-        "string.min": "Username minimal harus terdiri dari 3 karakter",
-        "string.max": "Username maksimal terdiri dari 30 karakter",
-        "any.required": "Username wajib diisi",
-      }),
-    email: Joi.string()
-      .trim()
-      .pattern(/^[a-zA-Z0-9._%+-]+@gmail\.com$/)
-      .email({ minDomainSegments: 2, tlds: { allow: ["com"] } })
-      .required()
-      .messages({
-        "string.base": "Email harus berupa teks",
-        "string.empty": "Email tidak boleh kosong",
-        "string.pattern.base": "Email harus menggunakan domain @gmail.com",
-        "string.email": "Format email tidak valid",
-        "any.required": "Email wajib diisi",
-      }),
+    searchParams: Joi.string().trim().required().messages({
+      "any.required": "Parameter wajib diisi",
+    }),
     otp: Joi.string()
       .allow("")
       .optional()
