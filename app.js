@@ -52,12 +52,6 @@ const init = async (MONGODB_URI, PORT, JWT_SECRET_KEY) => {
         credentials: true, // agar cookie bisa dikirim
       },
     },
-    routes: {
-      cors: {
-        origin: ["*"], // atau spesifik ['http://localhost:5173']
-        credentials: true, // agar cookie bisa dikirim
-      },
-    },
   });
 
   await server.register([require("hapi-auth-jwt2"), require("@hapi/cookie")]);
@@ -87,8 +81,10 @@ const init = async (MONGODB_URI, PORT, JWT_SECRET_KEY) => {
       // encoding: "none", // ⬅️ penting untuk JWT! Jangan biarkan Hapi auto-encode
     },
     validate: async (request, session) => {
+      console.log(session);
       try {
         const decoded = jwt.verify(session, JWT_SECRET_KEY);
+        console.log(decoded);
         if (!decoded) {
           throw new Error("JWT Expired");
         }
@@ -97,16 +93,33 @@ const init = async (MONGODB_URI, PORT, JWT_SECRET_KEY) => {
           credentials: decoded.data_user, // simpan info user ke credentials
         };
       } catch (err) {
-        if (err) {
-          return boom.badRequest(err.message);
-        } else {
-          return boom.badRequest("Session expired/tidak ditemukan");
-        }
+        return {
+          isValid: false,
+          credentials: null,
+        };
       }
     },
   });
 
   server.auth.default("session");
+
+  // Tambahkan middleware untuk handle 401 dengan custom message
+  server.ext("onPreResponse", (request, h) => {
+    if (
+      request.response?.isBoom &&
+      request.response.output.statusCode === 401
+    ) {
+      return h
+        .response({
+          statusCode: 401,
+          error: "Unauthorized",
+          message: "Sesi tidak valid atau token kedaluwarsa",
+        })
+        .code(401);
+    }
+
+    return h.continue;
+  });
 
   server.route(authRoutes);
 

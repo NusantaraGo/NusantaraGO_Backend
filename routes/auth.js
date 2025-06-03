@@ -249,24 +249,22 @@ const updateUserValidateSchema = () => {
       }),
     password: Joi.string()
       .trim()
+      .allow("")
+      .optional()
       .pattern(/^(?=[A-Z])(?=.*[a-zA-Z])(?=.*\d)(?=.*[#!\-_.]).{6,}$/)
-      .required()
       .messages({
         "string.base": "Password harus berupa teks",
-        "string.empty": "Password tidak boleh kosong",
         "string.pattern.base":
           "Password harus diawali huruf kapital, minimal 6 karakter, mengandung angka dan simbol (#!-_.)",
-        "any.required": "Password wajib diisi",
       }),
 
     password2: Joi.string()
       .trim()
+      .allow("")
+      .optional()
       .valid(Joi.ref("password"))
-      .required()
       .messages({
         "any.only": "Konfirmasi password tidak cocok",
-        "string.empty": "Konfirmasi password tidak boleh kosong",
-        "any.required": "Konfirmasi password wajib diisi",
       }),
   });
 };
