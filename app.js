@@ -107,7 +107,8 @@ const init = async (MONGODB_URI, PORT, JWT_SECRET_KEY) => {
   server.ext("onPreResponse", (request, h) => {
     if (
       request.response?.isBoom &&
-      request.response.output.statusCode === 401
+      request.response.output.statusCode === 401 &&
+      !request.path.includes("/login")
     ) {
       return h
         .response({

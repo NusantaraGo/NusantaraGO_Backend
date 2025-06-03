@@ -208,6 +208,7 @@ const authController = {
     if (!user) {
       return Boom.unauthorized("Kesalahan Username(tidak sesuai)");
     }
+    console.log(user);
     try {
       const isMatch = await verifyPassword(password, user.password);
       if (!isMatch) {
