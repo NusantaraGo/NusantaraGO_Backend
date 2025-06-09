@@ -225,7 +225,6 @@ const authController = {
 
     // buat data user baru untuk ke client
     const data_user = {
-      username: user.username,
       email: user.email,
     };
 
@@ -261,6 +260,7 @@ const authController = {
   getUser: async (request, h) => {
     // cek data autentikas sekarang(username, email)
     const authNow = request.auth.credentials;
+    console.log(authNow);
 
     // dapatkan data user
     const user = await User.findOne({ ...authNow, verified: true }).select({
@@ -294,7 +294,6 @@ const authController = {
       // temukan username dari database
       const user = await User.findOne({ email, verified: true }).select({
         _id: 0,
-        password: 0,
         otp: 0,
         otpCreatedAt: 0,
         otpExpiredAt: 0,
@@ -305,29 +304,38 @@ const authController = {
         throw new Error("email tidak ditemukan/belum terverifikasi");
       }
 
-      // cek username dan password wajib berbeda
-      const existingUser = await User.findOne({ username }).select({
-        username: 1,
-      });
-      if (existingUser) {
-        throw new Error("Username tidak boleh sama");
-      }
+      // ambil user sama atau tidak
+      const countExistingUser = await User.countDocuments({ username });
+
+      /* The line `set = { username };` is creating an object named `set` with a property `username`
+      and assigning it the value of the `username` variable. This is a shorthand way of creating an
+      object with a property that has the same name as the variable and assigning it the value of
+      that variable. */
       set = {
         username,
       };
-      if (password) {
+
+      /* This block of code is handling the scenario where a user wants to update their profile
+      information, including their username and password. Here's a breakdown of what each step does: */
+      if (password && password.trim().length > 0) {
         if (!(password === password2)) {
           throw new Error("konfirmasi Password tidak sama");
         }
-        if (!(await verifyPassword(password, user.password))) {
-          throw new Error("Password tidak boleh sama");
+        if (await verifyPassword(password, user.password)) {
+          throw new Error("Password sama dengan sebelumnya");
         }
         set = {
           username,
-          password,
+          password: await hashPasswordBcrypt(password),
         };
+      } else {
+        if (countExistingUser > 0) {
+          throw new Error("Username tidak boleh sama");
+        }
       }
 
+      /* The code `const existingUpdateUser = await User.updateOne({ email, verified: true }, { :
+      set });` is updating a user's information in the database. */
       const existingUpdateUser = await User.updateOne(
         {
           email,
@@ -337,9 +345,8 @@ const authController = {
           $set: set,
         }
       );
-
       // Check if the update was successful
-      if (existingUpdateUser.Modified === 1) {
+      if (existingUpdateUser.modifiedCount === 1) {
         return successResponse(
           "Update Berhasil!",
           "Profile saya berhasil di update"
