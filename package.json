@@ -4,7 +4,8 @@
   "description": "Backend Nusantara Go Project",
   "main": "app.js",
   "scripts": {
-    "server": "nodemon ./app.js localhost 8080"
+    "dev": "nodemon app.js",
+    "start": "node app.js"
   },
   "repository": {
     "type": "git",
