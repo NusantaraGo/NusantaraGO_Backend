@@ -208,7 +208,7 @@ const authController = {
     if (!user) {
       return Boom.unauthorized("Kesalahan Username(tidak sesuai)");
     }
-    console.log(user);
+
     try {
       const isMatch = await verifyPassword(password, user.password);
       if (!isMatch) {
@@ -364,6 +364,26 @@ const authController = {
         return Boom.internal("Ada kesalahan di server!");
       }
     }
+  },
+
+  deleteUser: async (request, h) => {
+    const authNow = request.auth.credentials;
+    // Jika tidak ada sesi aktif
+    if (!authNow) {
+      return h
+        .response(errorResponse("Gagal Logout", "Tidak ada sesi login aktif."))
+        .code(401);
+    }
+
+    // Hapus cookie auth/token
+    h.unstate("session");
+
+    return h.response(
+      successResponse(
+        "Logout Berhasil!",
+        `User <b>${authNow.email}</b> berhasil keluar dari sesi`
+      )
+    );
   },
 };
 

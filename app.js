@@ -57,7 +57,6 @@ const init = async (MONGODB_URI, PORT, JWT_SECRET_KEY) => {
   await server.register([require("hapi-auth-jwt2"), require("@hapi/cookie")]);
 
   const validate = async (decoded, request, h) => {
-    console.log(decoded, request, h);
     return { isValid: true }; // Bisa tambahkan pengecekan ke DB jika perlu
   };
 
