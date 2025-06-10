@@ -106,10 +106,7 @@ class AuthUrl {
   logout() {
     return {
       method: "GET",
-      path: "/auth/delete-user",
-      options: {
-        auth: false,
-      },
+      path: "/auth/logout",
       handler: authController.deleteUser,
     };
   }

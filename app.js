@@ -102,19 +102,32 @@ const init = async (MONGODB_URI, PORT, JWT_SECRET_KEY) => {
 
   // Tambahkan middleware untuk handle 401 dengan custom message
   server.ext("onPreResponse", (request, h) => {
+    const response = request.response;
     if (
-      request.response?.isBoom &&
-      request.response.output.statusCode === 401 &&
+      response?.isBoom &&
+      response.output.statusCode === 401 &&
       !request.path.includes("/login")
     ) {
       // hapus cookie dari client
       h.unstate("session");
 
+      // Ambil pesan dari payload Boom
+      let originalMessage = response.output.payload.message;
+
+      // Ganti pesan default dari Hapi dengan pesan kita
+      if (
+        originalMessage === "Missing authentication" ||
+        originalMessage === "Authentication credentials are missing" ||
+        originalMessage === "Invalid credentials"
+      ) {
+        originalMessage = "Sesi tidak valid atau token kedaluwarsa";
+      }
+
       return h
         .response({
           statusCode: 401,
           error: "Unauthorized",
-          message: "Sesi tidak valid atau token kedaluwarsa",
+          message: originalMessage,
         })
         .code(401);
     }

@@ -368,11 +368,13 @@ const authController = {
 
   deleteUser: async (request, h) => {
     const authNow = request.auth.credentials;
+
+    console.log(!authNow);
     // Jika tidak ada sesi aktif
     if (!authNow) {
-      return h
-        .response(errorResponse("Gagal Logout", "Tidak ada sesi login aktif."))
-        .code(401);
+      return Boom.badRequest(
+        "Gagal melakukan logout! Silahkan login terlebih dahulu."
+      );
     }
 
     // Hapus cookie auth/token
