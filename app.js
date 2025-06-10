@@ -57,7 +57,6 @@ const init = async (MONGODB_URI, PORT, JWT_SECRET_KEY) => {
   await server.register([require("hapi-auth-jwt2"), require("@hapi/cookie")]);
 
   const validate = async (decoded, request, h) => {
-    console.log(decoded, request, h);
     return { isValid: true }; // Bisa tambahkan pengecekan ke DB jika perlu
   };
 
@@ -81,10 +80,8 @@ const init = async (MONGODB_URI, PORT, JWT_SECRET_KEY) => {
       // encoding: "none", // ⬅️ penting untuk JWT! Jangan biarkan Hapi auto-encode
     },
     validate: async (request, session) => {
-      console.log(session);
       try {
         const decoded = jwt.verify(session, JWT_SECRET_KEY);
-        console.log(decoded);
         if (!decoded) {
           throw new Error("JWT Expired");
         }
@@ -110,6 +107,9 @@ const init = async (MONGODB_URI, PORT, JWT_SECRET_KEY) => {
       request.response.output.statusCode === 401 &&
       !request.path.includes("/login")
     ) {
+      // hapus cookie dari client
+      h.unstate("session");
+
       return h
         .response({
           statusCode: 401,

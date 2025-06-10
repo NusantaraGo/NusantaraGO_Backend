@@ -102,6 +102,17 @@ class AuthUrl {
       handler: authController.updateUser,
     };
   }
+
+  logout() {
+    return {
+      method: "GET",
+      path: "/auth/delete-user",
+      options: {
+        auth: false,
+      },
+      handler: authController.deleteUser,
+    };
+  }
 }
 
 /**
@@ -275,6 +286,14 @@ const verifyOtpPost = new AuthUrl().verifyOtpPost(); //url post verify
 const loginPost = new AuthUrl().loginPost(); //url post login
 const getUser = new AuthUrl().getUser();
 const updateUser = new AuthUrl().updateUser();
+const logout = new AuthUrl().logout();
 // end
 
-module.exports = [registerPost, verifyOtpPost, loginPost, getUser, updateUser];
+module.exports = [
+  registerPost,
+  verifyOtpPost,
+  loginPost,
+  logout,
+  getUser,
+  updateUser,
+];
