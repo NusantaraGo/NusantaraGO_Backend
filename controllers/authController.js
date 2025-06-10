@@ -271,14 +271,10 @@ const authController = {
       otpExpiredAt: 0,
     });
 
-    console.log(user);
-
     // mendapatkan user?
     if (!user) {
       return Boom.forbidden("User belum terverifikasi. Coba lagi!");
     }
-
-    console.log("jalan");
 
     // kembalikan responsenya dalam bentuk json
     return h.response(
