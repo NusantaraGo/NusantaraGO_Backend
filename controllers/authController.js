@@ -39,7 +39,7 @@ const authController = {
     // cek username sama sudah ada atau belum
     const existingUsername = await User.findOne({ username });
     if (existingUsername) {
-      if (existingUser.verified === true) {
+      if (existingUsername.verified === true) {
         return Boom.badRequest("Username sudah terdaftar");
       }
       await User.deleteOne(existingUsername);
@@ -53,7 +53,7 @@ const authController = {
     // encrypt password
     let hashedPassword;
     try {
-      response = await hashPasswordBcrypt(password);
+      const response = await hashPasswordBcrypt(password);
       hashedPassword = response;
     } catch (err) {
       return Boom.badRequest(err);
@@ -73,7 +73,6 @@ const authController = {
       password: hashedPassword,
       otp,
       otpCreatedAt: new Date(),
-      otpExpiredAt, //10 menit
       otpExpiredAt, //10 menit
     });
 
@@ -126,6 +125,7 @@ const authController = {
 
     // ubah uuid searchparams jadi string email
     const responseString = await uuidToString(searchParams);
+    console.log(responseString);
     const email = responseString + "@gmail.com";
 
     console.log(email);
@@ -242,7 +242,8 @@ const authController = {
       .response(
         successResponse(
           "Login Berhasil!",
-          `User <b>${username}</b> berhasil melakukan login`
+          `User <b>${username}</b> berhasil melakukan login`,
+          { token }
         )
       )
       .state("session", token); // <--- pastikan pakai .state()
@@ -311,7 +312,7 @@ const authController = {
       and assigning it the value of the `username` variable. This is a shorthand way of creating an
       object with a property that has the same name as the variable and assigning it the value of
       that variable. */
-      set = {
+      let set = {
         username,
       };
 
@@ -329,7 +330,7 @@ const authController = {
           password: await hashPasswordBcrypt(password),
         };
       } else {
-        if (countExistingUser > 0) {
+        if (username !== user.username && countExistingUser > 0) {
           throw new Error("Username tidak boleh sama");
         }
       }
@@ -377,15 +378,14 @@ const authController = {
       );
     }
 
-    // Hapus cookie auth/token
-    h.unstate("session");
-
-    return h.response(
-      successResponse(
-        "Logout Berhasil!",
-        `User <b>${authNow.email}</b> berhasil keluar dari sesi`
+    return h
+      .response(
+        successResponse(
+          "Logout Berhasil!",
+          `User <b>${authNow.email}</b> berhasil keluar dari sesi`
+        )
       )
-    );
+      .unstate("session");
   },
 };
 

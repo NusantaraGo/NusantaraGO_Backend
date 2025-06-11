@@ -48,7 +48,7 @@ const init = async (MONGODB_URI, PORT, JWT_SECRET_KEY) => {
     host: "localhost",
     routes: {
       cors: {
-        origin: ["http://localhost:8080"], // atau spesifik ['http://localhost:5173']
+        origin: ["*"], // atau spesifik ['http://localhost:5173']
         credentials: true, // agar cookie bisa dikirim
       },
     },
@@ -76,7 +76,8 @@ const init = async (MONGODB_URI, PORT, JWT_SECRET_KEY) => {
       ttl: 24 * 60 * 60 * 1000, // 1 hari
       isSecure: NODE_ENV === "production", // HTTPS di production
       isHttpOnly: NODE_ENV === "production", // Anti-XSS
-      isSameSite: "None",
+      isSameSite: "None", // cross-site (dengan HTTPS)
+      // encoding: "none", // ⬅️ penting untuk JWT! Jangan biarkan Hapi auto-encode
     },
     validate: async (request, session) => {
       try {
@@ -102,14 +103,12 @@ const init = async (MONGODB_URI, PORT, JWT_SECRET_KEY) => {
   // Tambahkan middleware untuk handle 401 dengan custom message
   server.ext("onPreResponse", (request, h) => {
     const response = request.response;
+
     if (
       response?.isBoom &&
       response.output.statusCode === 401 &&
       !request.path.includes("/login")
     ) {
-      // hapus cookie dari client
-      h.unstate("session");
-
       // Ambil pesan dari payload Boom
       let originalMessage = response.output.payload.message;
 
@@ -128,7 +127,8 @@ const init = async (MONGODB_URI, PORT, JWT_SECRET_KEY) => {
           error: "Unauthorized",
           message: originalMessage,
         })
-        .code(401);
+        .code(401)
+        .unstate("session");
     }
 
     return h.continue;
