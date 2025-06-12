@@ -50,6 +50,7 @@ const init = async (MONGODB_URI, PORT, JWT_SECRET_KEY) => {
       cors: {
         origin: ["*"], // atau spesifik ['http://localhost:5173']
         credentials: true, // agar cookie bisa dikirim
+        headers: ["Accept", "Content-Type", "Authorization"],
       },
     },
   });

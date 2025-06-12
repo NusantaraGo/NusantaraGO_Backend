@@ -91,17 +91,13 @@ const authController = {
       return Boom.badRequest("❌ Gagal mengirim email:" + err.message);
     }
 
-    // buat uuid email
-    uuidEmail = await stringToUUID(email);
-    console.log(uuidEmail);
-
     // kirim reponse
     return h.response(
       successResponse(
         "Verifikasi otp",
         "OTP berhasil dikirimkan ke " + email + ". Silahkan cek email anda.",
         {
-          email: uuidEmail,
+          email: email,
           otpExpiredAt: otpExpiredAt,
         }
       )
@@ -124,11 +120,8 @@ const authController = {
     const { searchParams, otp } = request.payload;
 
     // ubah uuid searchparams jadi string email
-    const responseString = await uuidToString(searchParams);
-    console.log(responseString);
-    const email = responseString + "@gmail.com";
-
-    console.log(email);
+    const email = searchParams; // Gunakan searchParams langsung sebagai email
+    console.log("Email yang digunakan untuk verifikasi:", email); // Tambahkan log ini untuk debugging
 
     // tipe data email dan otp adalah string
     if (!(typeof email === "string" && typeof otp === "string")) {
@@ -206,16 +199,30 @@ const authController = {
     const user = await User.findOne({ username }).select({ _id: 0 });
     // cek apakah username ada atau tidak dan password tidak sama
     if (!user) {
-      return Boom.unauthorized("Kesalahan Username(tidak sesuai)");
+      return Boom.unauthorized("Kesalahan Username (tidak sesuai)");
     }
+
+    // Pastikan password user ada sebelum verifikasi
+    if (!user.password) {
+      console.error(
+        "User ditemukan, tetapi password hash tidak ada di database untuk user:",
+        user.username
+      );
+      return Boom.internal(
+        "Terjadi kesalahan internal server (password hash tidak ditemukan)."
+      );
+    }
+
+    console.log("Password hash dari database:", user.password); // Tambahkan log ini
 
     try {
       const isMatch = await verifyPassword(password, user.password);
       if (!isMatch) {
-        return Boom.unauthorized("Kesalahan Password(tidak sesuai)");
+        return Boom.unauthorized("Kesalahan Password (tidak sesuai)");
       }
     } catch (error) {
-      return Boom.badRequest(error);
+      console.error("Error saat verifikasi password:", error);
+      return Boom.badRequest("Gagal memverifikasi password. Coba lagi.");
     }
 
     // sudah terverifikasi?
@@ -223,30 +230,45 @@ const authController = {
       return Boom.forbidden("Username tidak terverifikasi. Coba lagi!");
     }
 
+    console.log("User terverifikasi. Melanjutkan pembuatan token..."); // Log baru
+
     // buat data user baru untuk ke client
     const data_user = {
       email: user.email,
     };
 
-    // buat token jwt
-    const token = jwt.sign({ data_user }, process.env.JWT_SECRET_KEY, {
-      algorithm: "HS256",
-      expiresIn: "1h",
-    });
+    try {
+      // buat token jwt
+      const token = jwt.sign({ data_user }, process.env.JWT_SECRET_KEY, {
+        algorithm: "HS256",
+        expiresIn: "1h",
+      });
 
-    if (!token) {
-      return Boom.badRequest("Gagal membuat token jwt");
-    }
+      if (!token) {
+        return Boom.badRequest("Gagal membuat token jwt");
+      }
 
-    return h
-      .response(
-        successResponse(
-          "Login Berhasil!",
-          `User <b>${username}</b> berhasil melakukan login`,
-          { token }
+      console.log("Token JWT berhasil dibuat."); // Log token berhasil
+      // console.log("Generated Token:", token.substring(0, 20) + "..."); // Debug token (opsional, hati-hati dengan log token lengkap)
+
+      return h
+        .response(
+          successResponse(
+            "Login Berhasil!",
+            `User <b>${username}</b> berhasil melakukan login`,
+            { token }
+          )
         )
-      )
-      .state("session", token); // <--- pastikan pakai .state()
+        .state("session", token); // <--- pastikan pakai .state()
+    } catch (tokenError) {
+      console.error(
+        "Error saat membuat token JWT atau mengatur sesi:",
+        tokenError
+      ); // Log error token/sesi
+      return Boom.internal(
+        "Terjadi kesalahan saat login (pembuatan token/sesi)."
+      );
+    }
   },
 
   /**

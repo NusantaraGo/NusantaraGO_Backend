@@ -30,6 +30,31 @@ class AuthUrl {
   }
 
   /**
+   * Handles OPTIONS requests for the register endpoint to manage CORS preflight.
+   * @returns {RouteOptions} Hapi route options
+   */
+  optionsRegister() {
+    return {
+      method: "OPTIONS",
+      path: "/auth/register",
+      options: {
+        auth: false, // Penting: Tidak perlu autentikasi untuk preflight
+        cors: true, // Pastikan CORS diaktifkan secara eksplisit
+      },
+      handler: (request, h) => {
+        // Hanya kirim respons 200 OK untuk preflight
+        return h
+          .response()
+          .code(200)
+          .header(
+            "Access-Control-Allow-Headers",
+            "Content-Type, Authorization"
+          );
+      },
+    };
+  }
+
+  /**
    * Verifies the OTP sent to the user's email and returns the user's data
    * if the OTP is valid and the user is verified.
    * @typedef {import("hapi").RouteOptions} RouteOptions
@@ -284,6 +309,7 @@ const loginPost = new AuthUrl().loginPost(); //url post login
 const getUser = new AuthUrl().getUser();
 const updateUser = new AuthUrl().updateUser();
 const logout = new AuthUrl().logout();
+const optionsRegister = new AuthUrl().optionsRegister();
 // end
 
 module.exports = [
@@ -293,4 +319,5 @@ module.exports = [
   logout,
   getUser,
   updateUser,
+  optionsRegister,
 ];
