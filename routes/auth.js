@@ -132,6 +132,9 @@ class AuthUrl {
     return {
       method: "GET",
       path: "/auth/logout",
+      options: {
+        auth: false,
+      },
       handler: authController.deleteUser,
     };
   }
