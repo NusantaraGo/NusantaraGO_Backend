@@ -45,6 +45,15 @@ const authController = {
       await User.deleteOne(existingUsername);
     }
 
+    // cek email sama sudah ada atau belum
+    const existingEmail = await User.findOne({ email });
+    if (existingEmail) {
+      if (existingEmail.verified === true) {
+        return Boom.badRequest("Username sudah terdaftar");
+      }
+      await User.deleteOne(existingEmail);
+    }
+
     // cek password dengan konfirmasi password
     if (password !== confirmPassword) {
       return Boom.badRequest("Password dan konfirmasi password harus sama");
@@ -81,14 +90,17 @@ const authController = {
       await user.save();
       console.log("✅ User berhasil disimpan:");
     } catch (err) {
-      return Boom.badRequest("❌ Error saat menyimpan user:" + err.message);
+      return Boom.badRequest(
+        "❌ Error saat menyimpan user:" + err.keyValue?.email
+      );
     }
 
     // kirim otp ke email
     try {
       await sendEmail(email, otp);
     } catch (err) {
-      return Boom.badRequest("❌ Gagal mengirim email:" + err.message);
+      console.log(err);
+      return Boom.badRequest(err.message);
     }
 
     // buat uuid email
